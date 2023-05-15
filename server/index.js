@@ -9,18 +9,44 @@ const mongoClient = new MongoClient(
 server.use(express.json());
 server.use(cors());
 
-// const rentalCars = [];
-
 server.get("/rental-cars", async (_, res) => {
-  const mongoCluster = await mongoClient.connect();
-  const rentalCars = await mongoCluster
-    .db("Rental")
-    .collection("RentalCars")
-    .find()
-    .toArray();
-  mongoCluster.close();
+  try {
+    const mongoCluster = await mongoClient.connect();
+    const rentalCars = await mongoCluster
+      .db("Rental")
+      .collection("RentalCars")
+      .find()
+      .toArray();
+    mongoCluster.close();
 
-  res.send(rentalCars);
+    res.send(rentalCars);
+  } catch (error) {
+    res.status(500).end();
+  }
+});
+
+server.post("/register-car", async (req, res) => {
+  try {
+    const payload = req.body;
+    const newRentalCar = {
+      owner: {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        gender: payload.gender,
+      },
+      carBrand: payload.carBrand,
+    };
+    const mongoCluster = await mongoClient.connect();
+    const response = await mongoCluster
+      .db("Rental")
+      .collection("RentalCars")
+      .insertOne(newRentalCar);
+    mongoCluster.close();
+
+    res.status(201).send(response);
+  } catch (error) {
+    res.status(500).end();
+  }
 });
 
 server.get("/rental-cars/:carBrand", (req, res) => {
@@ -39,22 +65,6 @@ server.get("/car-brands", (_, res) => {
   const uniqueCarBrands = [...new Set(carBrands)];
 
   res.send(uniqueCarBrands);
-});
-
-server.post("/register-car", (req, res) => {
-  const payload = req.body;
-  const newRentalCar = {
-    owner: {
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      gender: payload.gender,
-    },
-    carBrand: payload.carBrand,
-  };
-
-  rentalCars.push(newRentalCar);
-
-  res.status(201).end();
 });
 
 server.listen(8080, () => console.log("server is running at 8080"));
